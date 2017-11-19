@@ -100,10 +100,10 @@ type UserHTTPData struct {
 
 type Subscription struct {
 	ChannelID int    `json:"channel_id"`
-	CreatedAt string `json:"created_at"`
+	CreatedAt time.Time `json:"created_at"`
 	Status    int    `json:"status"`
 	TagID     int    `json:"tag_id"`
 	TagType   int    `json:"tag_type"`
-	UpdatedAt string `json:"updated_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 	UserID    string `json:"user_id"`
 }
