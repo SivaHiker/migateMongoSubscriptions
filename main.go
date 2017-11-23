@@ -70,7 +70,8 @@ func main(){
              if(err !=nil){
              	fmt.Println("Not able to query the records")
 			 }
-
+             fmt.Println(len(usrSubscription))
+			fmt.Println(usrSubscription)
 			 for _,subs := range usrSubscription {
 				 mongoJson, err := json.Marshal(subs)
 				 if err != nil {
