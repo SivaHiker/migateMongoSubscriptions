@@ -50,7 +50,7 @@ func main(){
 	// Start reading from the file with a reader.
 	reader := bufio.NewReader(file)
 
-	limiter := time.Tick(time.Nanosecond * 333333333)
+	limiter := time.Tick(time.Nanosecond * 100000000)
 
 	for {
 		var buffer bytes.Buffer
@@ -65,20 +65,23 @@ func main(){
           	 uidString := string(line[:])
           	 uid :=uidString[0:16]
 			 <-limiter
-			 usrSubscription := Subscription{}
-			 err := c.Find(bson.M{"user_id": uid}).One(&usrSubscription)
+			 usrSubscription := []Subscription{}
+			 err := c.Find(bson.M{"user_id": uid}).All(&usrSubscription)
              if(err !=nil){
              	fmt.Println("Not able to query the records")
 			 }
-			mongoJson, err := json.Marshal(usrSubscription)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			fmt.Println(string(mongoJson))
-			outputfile1.WriteString(string(mongoJson)+"\n")
-			recordsCount++
-			fmt.Println("Number of records exported from the DB",recordsCount)
+             fmt.Println(len(usrSubscription))
+			 for _,subs := range usrSubscription {
+				 mongoJson, err := json.Marshal(subs)
+				 if err != nil {
+					 fmt.Println(err)
+					 return
+				 }
+				 fmt.Println(string(mongoJson))
+				 outputfile1.WriteString(string(mongoJson)+"\n")
+				 recordsCount++
+				 fmt.Println("Number of records exported from the DB",recordsCount)
+			 }
 		}
 	}
 	fmt.Println("Final Number of records exported from the DB",recordsCount)
