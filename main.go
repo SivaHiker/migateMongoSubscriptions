@@ -9,6 +9,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"io"
+	"encoding/json"
 )
 
 func main(){
@@ -21,7 +22,13 @@ func main(){
 		println(err)
 	}
 
-	fromSession, err := mgo.Dial("10.15.0.145")
+	outputfile1, err := os.Create("resultRecords.json")
+	if(err!=nil){
+		fmt.Println("Not able to create a file")
+	}
+	defer outputfile1.Close()
+
+	fromSession, err := mgo.Dial("10.9.33.2")
 	if err != nil {
 		panic(err)
 	}
@@ -30,15 +37,14 @@ func main(){
 	c := fromSession.DB("subscription").C("channel_subscriptions")
 	fmt.Println(c.Name)
 
-
-	toSession, err := mgo.Dial("10.15.0.145")
-	if err != nil {
-		panic(err)
-	}
-	defer toSession.Close()
-
-	c2 := fromSession.DB("subscription").C("channel_subscriptions")
-	fmt.Println(c.Name)
+	//toSession, err := mgo.Dial("10.15.0.145")
+	//if err != nil {
+	//	panic(err)
+	//}
+	//defer toSession.Close()
+	//
+	//c2 := fromSession.DB("subscription").C("channel_subscriptions")
+	//fmt.Println(c.Name)
 
 
 	// Start reading from the file with a reader.
@@ -60,43 +66,28 @@ func main(){
           	 uid :=uidString[0:16]
 			 <-limiter
 			 usrSubscription := Subscription{}
-			 collection := c.Find(bson.M{"user_id": uid}).One(&usrSubscription)
-			 err:=c2.Insert(collection)
-			 if(err!=nil){
-			 	fmt.Println("Not able to insert the records")
-          	} else {
-				 recordsCount++
+			 err := c.Find(bson.M{"user_id": uid}).One(&usrSubscription)
+             if(err !=nil){
+             	fmt.Println("Not able to query the records")
 			 }
+			mongoJson, err := json.Marshal(usrSubscription)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fmt.Println(string(mongoJson))
+			outputfile1.WriteString(string(mongoJson)+"\n")
+			recordsCount++
 			fmt.Println("Number of records exported from the DB",recordsCount)
 		}
-
-		fmt.Println("Final Number of records exported from the DB",recordsCount)
-
 	}
-
+	fmt.Println("Final Number of records exported from the DB",recordsCount)
 	if err != io.EOF {
 		fmt.Printf(" > Failed!: %v\n", err)
 	}
 
 }
 
-type UserInfo struct {
-	HttpUserData UserHTTPData `json:"UserData"`
-	HttpFlag bool `json:"flag"`
-}
-
-
-type UserHTTPData struct {
-	EncryptedToken string `json:"encrypted_token"`
-	Msisdn         string `json:"msisdn"`
-	PlatformToken  string `json:"platform_token"`
-	PlatformUID    string `json:"platform_uid"`
-	PubKey         string `json:"pub_key"`
-	RsaKey         string `json:"rsa_key"`
-	Token          string `json:"token"`
-	UID            string `json:"uid"`
-	UUID           string `json:"uuid"`
-}
 
 type Subscription struct {
 	ChannelID int    `json:"channel_id"`
@@ -106,4 +97,17 @@ type Subscription struct {
 	TagType   int    `json:"tag_type"`
 	UpdatedAt time.Time `json:"updated_at"`
 	UserID    string `json:"user_id"`
+}
+
+type UserInfo struct {
+	UserData UserData `json:"UserData"`
+	Flag bool `json:"flag"`
+}
+
+type UserData struct {
+	Msisdn string `json:"msisdn"`
+	Token  string `json:"token"`
+	UID    string `json:"uid"`
+	PlatformUID string `json:"platformuid"`
+	PlatformToken string `json:"platformtoken"`
 }
