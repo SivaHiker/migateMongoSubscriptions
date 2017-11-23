@@ -28,7 +28,7 @@ func main(){
 	}
 	defer outputfile1.Close()
 
-	fromSession, err := mgo.Dial("10.9.33.2")
+	fromSession, err := mgo.Dial("10.9.33.3")
 	if err != nil {
 		panic(err)
 	}
@@ -72,6 +72,8 @@ func main(){
 			 }
              fmt.Println(len(usrSubscription))
 			 for _,subs := range usrSubscription {
+			 	fmt.Println(subs.PlatformUID)
+				 fmt.Println(subs.UserID)
 				 mongoJson, err := json.Marshal(subs)
 				 if err != nil {
 					 fmt.Println(err)
@@ -94,6 +96,7 @@ func main(){
 
 type Subscription struct {
 	ChannelID int    `json:"channel_id"`
+	PlatformUID string `json:"platform_uid"`
 	CreatedAt time.Time `json:"created_at"`
 	Status    int    `json:"status"`
 	TagID     int    `json:"tag_id"`
