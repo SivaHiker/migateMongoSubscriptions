@@ -94,6 +94,7 @@ func main(){
 
 
 type Subscription struct {
+	ID        bson.ObjectId `bson:"_id,omitempty"`
 	ChannelID int    `json:"channel_id"`
 	PlatformUID string `json:"platform_uid"`
 	CreatedAt time.Time `json:"created_at"`
