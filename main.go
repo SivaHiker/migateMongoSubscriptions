@@ -65,17 +65,13 @@ func main(){
           	 uidString := string(line[:])
           	 uid :=uidString[0:16]
 			 <-limiter
-			 usrSubscription := []Subscription{}
+			 var usrSubscription []Subscription
 			 err := c.Find(bson.M{"user_id": uid}).All(&usrSubscription)
              if(err !=nil){
              	fmt.Println("Not able to query the records")
 			 }
-             fmt.Println(len(usrSubscription))
-             fmt.Println("The overall usersubscriptions",usrSubscription)
+
 			 for _,subs := range usrSubscription {
-			 	fmt.Println("individual use subscription",subs)
-			 	fmt.Println(subs.PlatformUID)
-				 fmt.Println(subs.UserID)
 				 mongoJson, err := json.Marshal(subs)
 				 if err != nil {
 					 fmt.Println(err)
