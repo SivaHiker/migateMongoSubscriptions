@@ -8,13 +8,20 @@ import (
 	"bytes"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"io"
 	"encoding/json"
+	"io"
 )
+
+var recordsCount int64
+var jobs chan []bson.M
+var done chan bool
+var outputfile1 *os.File
 
 func main(){
 
-	var recordsCount int64
+	jobs = make(chan []bson.M, 10000)
+	done = make(chan bool, 1)
+
 	file, err := os.Open("/home/siva/LatestAppOpenUsers_20170512_to_20171107.txt")
 	defer file.Close()
 
@@ -22,7 +29,7 @@ func main(){
 		println(err)
 	}
 
-	outputfile1, err := os.Create("resultRecords.json")
+	outputfile1, err = os.Create("resultRecords.json")
 	if(err!=nil){
 		fmt.Println("Not able to create a file")
 	}
@@ -37,6 +44,10 @@ func main(){
 	c := fromSession.DB("subscription").C("channel_subscriptions")
 	fmt.Println(c.Name)
 
+	for w := 1; w <= 100; w++ {
+		go workerPool()
+	}
+
 	//toSession, err := mgo.Dial("10.15.0.145")
 	//if err != nil {
 	//	panic(err)
@@ -50,7 +61,7 @@ func main(){
 	// Start reading from the file with a reader.
 	reader := bufio.NewReader(file)
 
-	limiter := time.Tick(time.Nanosecond * 100000000)
+	limiter := time.Tick(time.Nanosecond * 20000000)
 
 	for {
 		var buffer bytes.Buffer
@@ -61,34 +72,53 @@ func main(){
 		// If we're just at the EOF, break
 		if err != nil {
 			break
-          } else {
-          	 uidString := string(line[:])
-          	 uid :=uidString[0:16]
-			 <-limiter
-			 var usrSubscription []bson.M
-			 err := c.Find(bson.M{"user_id": uid}).All(&usrSubscription)
-             if(err !=nil){
-             	fmt.Println("Not able to query the records")
-			 }
-             fmt.Println(len(usrSubscription))
-			 fmt.Println(usrSubscription)
-			 for _,subs := range usrSubscription {
-			 	 fmt.Println(subs)
-				 mongoJson, err := json.Marshal(subs)
-				 if err != nil {
-					 fmt.Println(err)
-					 return
-				 }
-				 fmt.Println(string(mongoJson))
-				 outputfile1.WriteString(string(mongoJson)+"\n")
-				 recordsCount++
-				 fmt.Println("Number of records exported from the DB",recordsCount)
-			 }
+		} else {
+			uidString := string(line[:])
+			uid := uidString[0:16]
+			<-limiter
+			var usrSubscription []bson.M
+			err := c.Find(bson.M{"user_id": uid}).All(&usrSubscription)
+			if (err != nil) {
+				fmt.Println("Not able to query the records")
+			}
+			fmt.Println(len(usrSubscription))
+			jobs <- usrSubscription
+
 		}
 	}
 	fmt.Println("Final Number of records exported from the DB",recordsCount)
 	if err != io.EOF {
 		fmt.Printf(" > Failed!: %v\n", err)
+	}
+	close(jobs)
+	<-done
+
+}
+
+
+func workerPool() {
+
+	for (true) {
+		select {
+		case msg1,ok := <-jobs:
+			if ok {
+				fmt.Println("received", msg1)
+				for _, subs := range msg1 {
+					fmt.Println(subs)
+					mongoJson, err := json.Marshal(subs)
+					if err != nil {
+						fmt.Println(err)
+						return
+					}
+					fmt.Println(string(mongoJson))
+					outputfile1.WriteString(string(mongoJson) + "\n")
+					recordsCount++
+					fmt.Println("Number of records exported from the DB", recordsCount)
+				}
+			}else {
+                done <- true
+			}
+		}
 	}
 
 }
